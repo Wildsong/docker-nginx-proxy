@@ -1,0 +1,26 @@
+#!/usr/bin/bash
+#
+# Reload the configuration for the nginx proxy;
+# this is much faster than restarting the containers
+
+containername="proxy_reverse"
+
+id=`docker ps | grep $containername | cut -b 1-12`
+
+if [ "$id" == "" ]; then
+  echo "Is $containername container running?"
+  exit 1
+fi
+
+# Test the configuration before reloading
+docker exec $id nginx -t -q
+if [ $? == 0 ]; then
+  docker exec $id nginx -q -s reload
+  #docker logs $id
+  echo "$containername restarted."
+else
+  echo "Not a good time to reload. Fix your error(s)."
+  exit 1
+fi
+
+exit 0

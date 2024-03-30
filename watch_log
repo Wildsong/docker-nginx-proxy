@@ -1,0 +1,11 @@
+#!/usr/bin/bash
+#
+#service='proxy_reverse'
+service='proxy_content_server'
+
+id=`docker ps -f name=$service -q`
+echo "Service id for $service is ${id}."
+
+docker logs --follow $id
+
+exit 0

@@ -1,0 +1,64 @@
+volumes:
+  # These certificates are generated and maintained by ../docker/letsencrypt
+  certs:
+    name: certs
+    external: true
+
+services:
+  reverse:
+    container_name: proxy_reverse
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./proxy_default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./proxy.conf:/etc/nginx/conf.d/proxy.conf:ro
+      - certs:/etc/nginx/certs:ro
+      - ./www_content:/srv/www:ro
+      # Define virtual hosts here
+      - ./vhost.d:/etc/nginx/vhost.d:ro
+      # Limit access, good for testing.
+      - ./network_internal.conf:/etc/nginx/network_internal.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: curl --fail http://localhost || exit 1
+      interval: 60s
+      retries: 3
+      start_period: 20s
+      timeout: 10s
+    deploy:
+      mode: global
+      update_config:
+        order: 'stop-first'
+      restart_policy:
+        condition: any
+        delay: 10s # Wait between restart attempts
+        window: 30s # Wait this long before deciding if restart was successful.
+
+  content_server:
+    container_name: proxy_content_server
+    image: nginx:latest
+    ports: [ "81:81" ] # Don't need this, it's just for testing.
+    volumes:
+      # Override the nginx default file, so we can load the image_filter module.
+      - ./content_default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx_image_filter.conf:/etc/nginx/nginx.conf:ro
+      - ./www_content:/srv/www:ro
+    #  - /media/applications/GIS/PublicWorks/bridgeimages:/srv/photos/bridges:ro
+    #  - /media/applications/GIS/Planning/waterway/photos:/srv/photos/waterway:ro
+    restart: unless-stopped
+    healthcheck:
+      test: curl --fail http://localhost:81 || exit 1
+      interval: 60s
+      retries: 3
+      start_period: 20s
+      timeout: 10s
+    deploy:
+      mode: global
+      update_config:
+        order: 'stop-first'
+      restart_policy:
+        condition: any
+        delay: 10s # Wait between restart attempts
+        window: 30s # Wait this long before deciding if restart was successful.
